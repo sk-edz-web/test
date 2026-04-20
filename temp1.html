@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Store</title>
+    <style> body { font-family: sans-serif; text-align: center; } </style>
+</head>
+<body>
+    <h1 id="store-name">Loading Store...</h1>
+    <h3 id="store-category"></h3>
+    
+    <div id="product-grid">
+        </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+        
+        const app = initializeApp({ /* Your Config Here */ });
+        const db = getDatabase(app);
+
+        // In a real app, extract UID from Subdomain. Here we mock it.
+        const sellerUid = new URLSearchParams(window.location.search).get('storeId');
+
+        if(sellerUid) {
+            get(ref(db, 'users/' + sellerUid)).then(snapshot => {
+                if(snapshot.exists()) {
+                    document.getElementById('store-name').innerText = snapshot.val().businessName;
+                    document.getElementById('store-category').innerText = snapshot.val().storeCategory;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
