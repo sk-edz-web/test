@@ -1,4 +1,4 @@
-// script.js – Full working version with User Lookup, Fixed Preview, Fixed Card Count & Direct Publish
+// script.js – Full working version with Dynamic Domain/Path Publishing
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
@@ -152,7 +152,6 @@ function updateCardsInfo() {
         return;
     }
     const used = sub.usedCards || 0;
-    // Fixed: Checking both 'free' and 'freeCards'
     const free = sub.free || sub.freeCards || 0;
     document.getElementById('free-cards-info').innerHTML = `📦 ${used}/${free} free cards used`;
 }
@@ -433,7 +432,6 @@ function loadSection(section) {
 }
 
 async function renderDashboard(panel) {
-    // Fixed: Grabbing correct free card value for dashboard UI
     const totalFree = userProfile.subscription?.free || userProfile.subscription?.freeCards || 0;
     
     panel.innerHTML = `
@@ -606,7 +604,6 @@ async function checkCardUsage() {
     const sub = userProfile.subscription;
     if (!sub) return;
     
-    // Fixed: Checking both 'free' and 'freeCards'
     const free = sub.free || sub.freeCards || 0;
     if (count > free) {
         alert(`You have exceeded your free card limit (${free}). Extra charges of ₹${sub.extra}/card will apply.`);
@@ -776,7 +773,6 @@ function previewSite() {
     }, 100);
 }
 
-// Function to handle the success UI for publishing
 function showPublishedSuccessModal(siteUrl) {
     const html = `
         <div class="modal-header">
@@ -806,14 +802,17 @@ function showPublishedSuccessModal(siteUrl) {
     });
 }
 
-// Fixed: Checks if already published, otherwise asks for key.
 async function publishFlow() {
     const siteSnap = await get(ref(db, `sites/${currentUser.uid}/published`));
     const isPublished = siteSnap.val();
-    const subdomain = `${currentUser.uid.substring(0, 8)}.skcommerse.com`;
-    const siteUrl = `https://${subdomain}`;
+    
+    // Create a clean URL-friendly sitename from username (or fallback to UID)
+    let rawName = userProfile.username || currentUser.uid.substring(0, 8);
+    const sitename = rawName.toLowerCase().replace(/[^a-z0-9]/g, ''); 
+    
+    // Generate dynamic domain path: window.location.origin + /sitename
+    const siteUrl = `${window.location.origin}/${sitename}`;
 
-    // Direct link popup if already published
     if (isPublished) {
         showPublishedSuccessModal(siteUrl);
         return;
