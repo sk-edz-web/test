@@ -1,4 +1,4 @@
-// script.js – Full Working Version with GitHub URL Logic & All Original Features
+// script.js – Full Working Version with Auto-Save Fix & GitHub Logic
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
@@ -847,6 +847,7 @@ function renderBuilder(panel) {
     });
 }
 
+// --- FIX: Auto-Save Template Content ---
 async function loadTemplateContent() {
     const tmp = userProfile.template || 'temp1';
     try {
@@ -859,6 +860,12 @@ async function loadTemplateContent() {
         
         const savedSnap = await get(ref(db, `sites/${currentUser.uid}/content`));
         const savedHtml = savedSnap.val();
+        
+        // AUTO-FIX: Database-la content illana, default template-ah udane save pannidum
+        if (!savedHtml) {
+            await set(ref(db, `sites/${currentUser.uid}/content`), html);
+        }
+        
         document.getElementById('store-html').value = savedHtml || html;
     } catch (err) {
         console.error('Error loading template:', err);
