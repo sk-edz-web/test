@@ -1,8 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, push, onValue, set, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-// TODO: PASTE YOUR FIREBASE CONFIG HERE
+// TODO: PASTE YOUR FIREBASE CONFIG HERE (Storage theva illa)
 const firebaseConfig = {
     apiKey: "AIzaSyAx-cKzYBpXNVykmSBO6BpV0Nd-632P7yI",
   authDomain: "ipa-b7eb7.firebaseapp.com",
@@ -15,7 +14,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const storage = getStorage(app);
 
 document.addEventListener('DOMContentLoaded', () => {
     
@@ -32,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const myIpDisplay = document.getElementById('myIpDisplay');
         if(myIpDisplay) myIpDisplay.innerText = myIp;
 
-        // 1. Connection Hub Add Target
         document.getElementById('toggleAddIp')?.addEventListener('click', () => {
             const box = document.getElementById('addIpBox');
             box.style.display = box.style.display === 'none' ? 'block' : 'none';
@@ -47,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 2. Render Hub & Interactions
         const hubList = document.getElementById('hubList');
         const inspectModal = document.getElementById('inspectModal');
         const inspectIpText = document.getElementById('inspectIpText');
@@ -70,7 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         `;
                         
-                        // JOIN LOGIC
                         div.querySelector('.joinBtn').onclick = () => {
                             const btn = div.querySelector('.joinBtn');
                             btn.innerText = 'Requesting...';
@@ -89,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                         };
 
-                        // INSPECT EASTER EGG LOGIC
                         div.querySelector('.inspectBtn').onclick = () => {
                             inspectIpText.innerText = data.ip;
                             inspectModal.style.display = 'flex';
@@ -120,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('closeInspectBtn').onclick = () => inspectModal.style.display = 'none';
         }
 
-        // 3. Incoming Request Logic
         const reqModal = document.getElementById('requestModal');
         let pendingReqSafeIp = null;
         let pendingReqRawIp = null;
@@ -146,7 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        // Dashboard Background Visualizer
         const canvas = document.getElementById('visualizer');
         if(canvas) {
             const ctx = canvas.getContext('2d');
@@ -211,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') sendChatBtn.click();
         });
 
-        // --- B. HOLD TO TALK (FIXED STORAGE ERROR HANDLING) ---
+        // --- B. HOLD TO TALK (AUDIO -> BASE64 -> FIREBASE DB) ---
         const pttBtn = document.getElementById('pttBtn');
         let mediaRecorder, audioChunks = [], isRecording = false;
 
@@ -222,25 +214,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 mediaRecorder.ondataavailable = e => { if(e.data.size > 0) audioChunks.push(e.data); };
-                mediaRecorder.onstop = async () => {
-                    pttBtn.innerText = '⏳ Sending...'; pttBtn.style.color = 'gray';
-                    const blob = new Blob(audioChunks, { type: 'audio/wav' }); audioChunks = [];
-                    const sRef = storageRef(storage, `voice_msgs/${roomId}/${Date.now()}.wav`);
+                mediaRecorder.onstop = () => {
+                    pttBtn.innerText = '⏳ Processing...'; pttBtn.style.color = 'gray';
+                    const blob = new Blob(audioChunks, { type: 'audio/webm' }); // webm is lighter than wav
+                    audioChunks = [];
                     
-                    try {
-                        // Attempt to upload. If Storage rules fail, this will catch the error.
-                        await uploadBytes(sRef, blob);
-                        const url = await getDownloadURL(sRef);
-                        push(ref(db, `chats/${roomId}`), { type: 'audio', sender: myIp, url: url });
-                        pttBtn.innerText = '🎤 Hold to Talk'; pttBtn.style.color = '#f39c12';
-                    } catch (error) {
-                        console.error("Firebase Storage Error: ", error);
-                        alert("Storage Upload Failed! Please check Firebase Storage Rules (allow read, write: if true;)");
-                        pttBtn.innerText = '🎤 Send Failed'; pttBtn.style.color = '#ff4757';
-                        setTimeout(() => { pttBtn.innerText = '🎤 Hold to Talk'; pttBtn.style.color = '#f39c12'; }, 3000);
-                    }
-                    
-                    stream.getTracks().forEach(t => t.stop());
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onloadend = () => {
+                        const base64Audio = reader.result;
+                        push(ref(db, `chats/${roomId}`), { type: 'audio', sender: myIp, url: base64Audio })
+                            .then(() => {
+                                pttBtn.innerText = '🎤 Hold to Talk'; pttBtn.style.color = '#f39c12';
+                            })
+                            .catch((err) => {
+                                console.error(err);
+                                alert("Failed to send message.");
+                                pttBtn.innerText = '🎤 Hold to Talk'; pttBtn.style.color = '#f39c12';
+                            });
+                        stream.getTracks().forEach(t => t.stop());
+                    };
                 };
                 mediaRecorder.start(); isRecording = true;
                 pttBtn.innerText = '🔴 Recording...'; pttBtn.style.background = 'rgba(243, 156, 18, 0.2)';
@@ -260,14 +253,14 @@ document.addEventListener('DOMContentLoaded', () => {
         pttBtn.addEventListener('touchend', stopRecording, {passive: false});
         pttBtn.addEventListener('mouseleave', stopRecording);
 
-        // --- C. WEBRTC LIVE CALL SIGNALING (FIXED AUDIO PLAYBACK) ---
+        // --- C. WEBRTC LIVE CALL SIGNALING (AUDIO FIX IMPLEMENTED) ---
         const startCallBtn = document.getElementById('startCallBtn');
         const endCallBtn = document.getElementById('endCallBtn');
         const callStatus = document.getElementById('callStatus');
         const localAudio = document.getElementById('localAudio');
         const remoteAudio = document.getElementById('remoteAudio');
         
-        // Ensure remote audio can play on mobile
+        // Essential mobile bypass tags
         remoteAudio.autoplay = true;
         remoteAudio.playsInline = true; 
 
@@ -278,19 +271,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const callRef = ref(db, `calls/${roomId}`);
 
         async function initWebRTC() {
-            // Added Echo Cancellation for better call quality
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
+            // Echo cancellation and noise suppression enabled
+            localStream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
+                video: false 
+            });
+            
             localAudio.srcObject = localStream;
-            localAudio.muted = true; // Mute self to prevent loopback
+            localAudio.muted = true; // IMPORTANT: Prevents hearing your own echo
 
             peerConnection = new RTCPeerConnection(servers);
             localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
             
             peerConnection.ontrack = (event) => { 
+                console.log("Remote track received!");
                 if (remoteAudio.srcObject !== event.streams[0]) {
                     remoteAudio.srcObject = event.streams[0];
-                    // Explicit play command required for some mobile browsers
-                    remoteAudio.play().catch(e => console.error("Audio playback blocked by browser:", e));
+                    remoteAudio.muted = false; // Force unmute
+                    remoteAudio.volume = 1.0;  // Force max volume
+                    
+                    // Force playback to bypass browser restrictions
+                    remoteAudio.play().then(() => {
+                        console.log("Audio playing successfully.");
+                    }).catch(e => {
+                        console.error("Browser blocked auto-play:", e);
+                        // Fallback user interaction trick
+                        const forcePlayBtn = document.createElement('button');
+                        forcePlayBtn.innerText = "🔇 Tap to Unmute Call";
+                        forcePlayBtn.className = "btn primary full-width";
+                        forcePlayBtn.style.background = "#ff4757";
+                        forcePlayBtn.onclick = () => { remoteAudio.play(); forcePlayBtn.remove(); };
+                        document.getElementById('chatBox').appendChild(forcePlayBtn);
+                    });
                 }
             };
             
@@ -300,21 +312,26 @@ document.addEventListener('DOMContentLoaded', () => {
             startCallVisualizer(localStream); 
         }
 
+        // Caller Side
         startCallBtn.onclick = async () => {
             startCallBtn.style.display = 'none'; endCallBtn.style.display = 'block';
             callStatus.innerText = "Calling..."; callStatus.style.color = "#f39c12";
-            await initWebRTC();
             
+            // Clean up old call data before starting new one
+            await remove(callRef);
+            
+            await initWebRTC();
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
             await set(ref(db, `calls/${roomId}/offer`), { type: offer.type, sdp: offer.sdp, from: safeMyIp });
         };
 
+        // Receiver Side (Handling Offer)
         onValue(ref(db, `calls/${roomId}/offer`), async (snap) => {
             if(snap.exists() && snap.val().from !== safeMyIp) {
                 const offer = snap.val();
                 startCallBtn.style.display = 'none'; endCallBtn.style.display = 'block';
-                callStatus.innerText = "Incoming Call... Auto-Answering..."; callStatus.style.color = "#00ffcc";
+                callStatus.innerText = "Connecting... (Auto-Answer)"; callStatus.style.color = "#00ffcc";
                 
                 await initWebRTC();
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
@@ -328,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Caller Side (Handling Answer)
         onValue(ref(db, `calls/${roomId}/answer`), async (snap) => {
             if(snap.exists() && snap.val().from !== safeMyIp && peerConnection) {
                 const answer = snap.val();
@@ -341,12 +359,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // ICE Candidate Sync
         onChildAdded(ref(db, `calls/${roomId}/candidates`), (snap) => {
             if(snap.key !== safeMyIp) {
                 snap.forEach(child => {
                     const candidate = new RTCIceCandidate(child.val());
                     if(peerConnection && peerConnection.remoteDescription) {
-                        peerConnection.addIceCandidate(candidate).catch(e => console.log(e));
+                        peerConnection.addIceCandidate(candidate).catch(e => console.log("ICE Error:", e));
                     } else {
                         pendingCandidates.push(candidate);
                     }
@@ -354,7 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        endCallBtn.onclick = () => {
+        // Hang Up Logic
+        const hangUpCall = () => {
             if(peerConnection) peerConnection.close();
             if(localStream) localStream.getTracks().forEach(t => t.stop());
             remove(callRef); 
@@ -364,12 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.clearRect(0,0, 300, 300);
         };
 
+        endCallBtn.onclick = hangUpCall;
+
         onValue(callRef, (snap) => {
             if(!snap.exists() && endCallBtn.style.display === 'block') {
                 if(peerConnection) peerConnection.close();
                 if(localStream) localStream.getTracks().forEach(t => t.stop());
                 startCallBtn.style.display = 'block'; endCallBtn.style.display = 'none';
-                callStatus.innerText = "Call Ended."; callStatus.style.color = "gray";
+                callStatus.innerText = "Call Ended by remote node."; callStatus.style.color = "gray";
                 const ctx = document.getElementById('liveCallVisualizer').getContext('2d');
                 ctx.clearRect(0,0, 300, 300);
             }
