@@ -29,15 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODULE 1: DASHBOARD LOGIC
     // ==========================================
     if(path.includes('dashboard') || path === '/' || path === '') {
-        document.getElementById('myIpDisplay').innerText = myIp;
+        const myIpDisplay = document.getElementById('myIpDisplay');
+        if(myIpDisplay) myIpDisplay.innerText = myIp;
 
         // 1. Connection Hub Add Target
-        document.getElementById('toggleAddIp').addEventListener('click', () => {
+        document.getElementById('toggleAddIp')?.addEventListener('click', () => {
             const box = document.getElementById('addIpBox');
             box.style.display = box.style.display === 'none' ? 'block' : 'none';
         });
 
-        document.getElementById('saveIpBtn').addEventListener('click', () => {
+        document.getElementById('saveIpBtn')?.addEventListener('click', () => {
             const targetIp = document.getElementById('targetIpInput').value.trim();
             if(targetIp) {
                 set(push(ref(db, `users/${safeMyIp}/hub`)), { ip: targetIp });
@@ -51,111 +52,117 @@ document.addEventListener('DOMContentLoaded', () => {
         const inspectModal = document.getElementById('inspectModal');
         const inspectIpText = document.getElementById('inspectIpText');
         
-        onValue(ref(db, `users/${safeMyIp}/hub`), (snap) => {
-            hubList.innerHTML = '';
-            if(snap.exists()) {
-                snap.forEach(child => {
-                    const data = child.val();
-                    const targetSafeIp = data.ip.replace(/\./g, '_');
-                    
-                    const div = document.createElement('div');
-                    div.className = 'conn-item';
-                    div.innerHTML = `
-                        <div class="conn-info"><span>IP: <b style="color:#fff">${data.ip}</b></span><span>📶</span></div>
-                        <div class="conn-actions">
-                            <button class="btn outline inspectBtn">Inspect</button>
-                            <button class="btn primary joinBtn">Join</button>
-                        </div>
-                    `;
-                    
-                    // JOIN LOGIC
-                    div.querySelector('.joinBtn').onclick = () => {
-                        const btn = div.querySelector('.joinBtn');
-                        btn.innerText = 'Requesting...';
-                        const reqRef = ref(db, `users/${targetSafeIp}/requests/${safeMyIp}`);
-                        set(reqRef, { status: 'pending', from: myIp });
+        if(hubList) {
+            onValue(ref(db, `users/${safeMyIp}/hub`), (snap) => {
+                hubList.innerHTML = '';
+                if(snap.exists()) {
+                    snap.forEach(child => {
+                        const data = child.val();
+                        const targetSafeIp = data.ip.replace(/\./g, '_');
                         
-                        onValue(reqRef, (resSnap) => {
-                            if(resSnap.exists() && resSnap.val().status === 'accepted') {
-                                remove(reqRef);
-                                window.location.href = `join.html?target=${data.ip}`;
-                            } else if(resSnap.exists() && resSnap.val().status === 'declined') {
-                                alert('Request Declined.');
-                                btn.innerText = 'Join';
-                                remove(reqRef);
-                            }
-                        });
-                    };
-
-                    // INSPECT EASTER EGG LOGIC
-                    div.querySelector('.inspectBtn').onclick = () => {
-                        inspectIpText.innerText = data.ip;
-                        inspectModal.style.display = 'flex';
+                        const div = document.createElement('div');
+                        div.className = 'conn-item';
+                        div.innerHTML = `
+                            <div class="conn-info"><span>IP: <b style="color:#fff">${data.ip}</b></span><span>📶</span></div>
+                            <div class="conn-actions">
+                                <button class="btn outline inspectBtn">Inspect</button>
+                                <button class="btn primary joinBtn">Join</button>
+                            </div>
+                        `;
                         
-                        // Easter Egg logic
-                        let clicks = 0;
-                        inspectIpText.onclick = () => {
-                            clicks++;
-                            if(clicks === 3) {
-                                clicks = 0;
-                                const pwd = prompt("SYSTEM OVERRIDE: Enter Admin Code");
-                                if(pwd === "5023") {
-                                    alert("🔓 ACCESS GRANTED: Admin Mode Unlocked.");
-                                    inspectIpText.style.color = "#ff4757"; // Turns red on hack
-                                } else {
-                                    alert("Access Denied.");
+                        // JOIN LOGIC
+                        div.querySelector('.joinBtn').onclick = () => {
+                            const btn = div.querySelector('.joinBtn');
+                            btn.innerText = 'Requesting...';
+                            const reqRef = ref(db, `users/${targetSafeIp}/requests/${safeMyIp}`);
+                            set(reqRef, { status: 'pending', from: myIp });
+                            
+                            onValue(reqRef, (resSnap) => {
+                                if(resSnap.exists() && resSnap.val().status === 'accepted') {
+                                    remove(reqRef);
+                                    window.location.href = `join.html?target=${data.ip}`;
+                                } else if(resSnap.exists() && resSnap.val().status === 'declined') {
+                                    alert('Request Declined.');
+                                    btn.innerText = 'Join';
+                                    remove(reqRef);
                                 }
-                            }
-                            // Reset clicks after 2 seconds
-                            setTimeout(() => clicks = 0, 2000);
+                            });
                         };
-                    };
-                    hubList.appendChild(div);
-                });
-            } else { hubList.innerHTML = '<p style="color:gray; font-size:12px; text-align:center;">No targets added.</p>'; }
-        });
 
-        document.getElementById('closeInspectBtn').onclick = () => inspectModal.style.display = 'none';
+                        // INSPECT EASTER EGG LOGIC
+                        div.querySelector('.inspectBtn').onclick = () => {
+                            inspectIpText.innerText = data.ip;
+                            inspectModal.style.display = 'flex';
+                            
+                            let clicks = 0;
+                            inspectIpText.onclick = () => {
+                                clicks++;
+                                if(clicks === 3) {
+                                    clicks = 0;
+                                    const pwd = prompt("SYSTEM OVERRIDE: Enter Admin Code");
+                                    if(pwd === "5023") {
+                                        alert("🔓 ACCESS GRANTED: Admin Mode Unlocked.");
+                                        inspectIpText.style.color = "#ff4757"; 
+                                    } else {
+                                        alert("Access Denied.");
+                                    }
+                                }
+                                setTimeout(() => clicks = 0, 2000);
+                            };
+                        };
+                        hubList.appendChild(div);
+                    });
+                } else { hubList.innerHTML = '<p style="color:gray; font-size:12px; text-align:center;">No targets added.</p>'; }
+            });
+        }
+
+        if(document.getElementById('closeInspectBtn')) {
+            document.getElementById('closeInspectBtn').onclick = () => inspectModal.style.display = 'none';
+        }
 
         // 3. Incoming Request Logic
         const reqModal = document.getElementById('requestModal');
         let pendingReqSafeIp = null;
         let pendingReqRawIp = null;
 
-        onChildAdded(ref(db, `users/${safeMyIp}/requests`), (data) => {
-            if(data.val().status === 'pending') {
-                pendingReqSafeIp = data.key;
-                pendingReqRawIp = data.val().from;
-                document.getElementById('reqIp').innerText = pendingReqRawIp;
-                reqModal.style.display = 'flex';
-            }
-        });
+        if(reqModal) {
+            onChildAdded(ref(db, `users/${safeMyIp}/requests`), (data) => {
+                if(data.val().status === 'pending') {
+                    pendingReqSafeIp = data.key;
+                    pendingReqRawIp = data.val().from;
+                    document.getElementById('reqIp').innerText = pendingReqRawIp;
+                    reqModal.style.display = 'flex';
+                }
+            });
 
-        document.getElementById('declineBtn').onclick = () => {
-            set(ref(db, `users/${safeMyIp}/requests/${pendingReqSafeIp}/status`), 'declined');
-            reqModal.style.display = 'none';
-        };
+            document.getElementById('declineBtn').onclick = () => {
+                set(ref(db, `users/${safeMyIp}/requests/${pendingReqSafeIp}/status`), 'declined');
+                reqModal.style.display = 'none';
+            };
 
-        document.getElementById('acceptBtn').onclick = () => {
-            set(ref(db, `users/${safeMyIp}/requests/${pendingReqSafeIp}/status`), 'accepted');
-            window.location.href = `join.html?target=${pendingReqRawIp}`;
-        };
+            document.getElementById('acceptBtn').onclick = () => {
+                set(ref(db, `users/${safeMyIp}/requests/${pendingReqSafeIp}/status`), 'accepted');
+                window.location.href = `join.html?target=${pendingReqRawIp}`;
+            };
+        }
 
         // Dashboard Background Visualizer (Dummy aesthetic)
         const canvas = document.getElementById('visualizer');
-        const ctx = canvas.getContext('2d');
-        const resize = () => { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; };
-        window.addEventListener('resize', resize); resize();
-        function drawBgWave() {
-            requestAnimationFrame(drawBgWave);
-            ctx.fillStyle = 'rgba(10, 12, 16, 0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-            for(let i=0; i<30; i++) {
-                const h = Math.random() * 50 + 10;
-                ctx.fillStyle = `rgba(0, 255, 204, ${Math.random()*0.5})`;
-                ctx.fillRect(i*(canvas.width/30), (canvas.height-h)/2, (canvas.width/30)-2, h);
+        if(canvas) {
+            const ctx = canvas.getContext('2d');
+            const resize = () => { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; };
+            window.addEventListener('resize', resize); resize();
+            function drawBgWave() {
+                requestAnimationFrame(drawBgWave);
+                ctx.fillStyle = 'rgba(10, 12, 16, 0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+                for(let i=0; i<30; i++) {
+                    const h = Math.random() * 50 + 10;
+                    ctx.fillStyle = `rgba(0, 255, 204, ${Math.random()*0.5})`;
+                    ctx.fillRect(i*(canvas.width/30), (canvas.height-h)/2, (canvas.width/30)-2, h);
+                }
             }
+            drawBgWave();
         }
-        drawBgWave();
     }
 
     // ==========================================
@@ -169,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetSafeIp = targetIp.replace(/\./g, '_');
         document.getElementById('targetIpTitle').innerText = targetIp;
 
-        // Unique Room ID based on IPs sorted
         const sorted = [safeMyIp, targetSafeIp].sort();
         const roomId = `room_${sorted[0]}_${sorted[1]}`;
 
@@ -191,7 +197,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             chatBox.appendChild(div);
-            chatBox.scrollTop = chatBox.scrollHeight;
+            // Smooth Scroll to bottom
+            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
         });
 
         sendChatBtn.onclick = () => {
@@ -200,6 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 chatInput.value = '';
             }
         };
+
+        // Allow pressing Enter to send message
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendChatBtn.click();
+        });
 
         // --- B. HOLD TO TALK (VOICE MESSAGE) ---
         const pttBtn = document.getElementById('pttBtn');
@@ -224,6 +236,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 pttBtn.innerText = '🔴 Recording...'; pttBtn.style.background = 'rgba(243, 156, 18, 0.2)';
             } catch(err) { alert('Mic access required for Voice Notes.'); }
         });
+
+        // Handle Touch Events for Mobile (Hold to Talk)
+        pttBtn.addEventListener('touchstart', (e) => { e.preventDefault(); pttBtn.dispatchEvent(new Event('mousedown')); });
+        pttBtn.addEventListener('touchend', (e) => { e.preventDefault(); pttBtn.dispatchEvent(new Event('mouseup')); });
 
         pttBtn.addEventListener('mouseup', () => {
             if(isRecording) { mediaRecorder.stop(); isRecording = false; pttBtn.style.background = 'transparent'; }
@@ -252,10 +268,9 @@ document.addEventListener('DOMContentLoaded', () => {
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) { push(ref(db, `calls/${roomId}/candidates/${safeMyIp}`), event.candidate.toJSON()); }
             };
-            startCallVisualizer(localStream); // Start visuals
+            startCallVisualizer(localStream); 
         }
 
-        // Caller clicks "Start Call"
         startCallBtn.onclick = async () => {
             startCallBtn.style.display = 'none'; endCallBtn.style.display = 'block';
             callStatus.innerText = "Calling..."; callStatus.style.color = "#f39c12";
@@ -266,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await set(ref(db, `calls/${roomId}/offer`), { type: offer.type, sdp: offer.sdp, from: safeMyIp });
         };
 
-        // Listen for Offers (Receiver logic)
         onValue(ref(db, `calls/${roomId}/offer`), async (snap) => {
             if(snap.exists() && snap.val().from !== safeMyIp) {
                 const offer = snap.val();
@@ -282,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Listen for Answers (Caller logic)
         onValue(ref(db, `calls/${roomId}/answer`), async (snap) => {
             if(snap.exists() && snap.val().from !== safeMyIp && peerConnection) {
                 const answer = snap.val();
@@ -293,7 +306,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Listen for ICE Candidates
         onChildAdded(ref(db, `calls/${roomId}/candidates`), (snap) => {
             if(snap.key !== safeMyIp && peerConnection) {
                 snap.forEach(candidateSnap => {
@@ -302,26 +314,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Hang Up
         endCallBtn.onclick = () => {
             if(peerConnection) peerConnection.close();
             if(localStream) localStream.getTracks().forEach(t => t.stop());
-            remove(callRef); // Clear call data in DB
+            remove(callRef); 
             startCallBtn.style.display = 'block'; endCallBtn.style.display = 'none';
             callStatus.innerText = "Standby..."; callStatus.style.color = "gray";
+            const canvas = document.getElementById('liveCallVisualizer');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0,0, canvas.width, canvas.height);
         };
 
-        // Delete call data if someone else deletes it (remote hangup)
         onValue(callRef, (snap) => {
             if(!snap.exists() && endCallBtn.style.display === 'block') {
                 if(peerConnection) peerConnection.close();
                 if(localStream) localStream.getTracks().forEach(t => t.stop());
                 startCallBtn.style.display = 'block'; endCallBtn.style.display = 'none';
                 callStatus.innerText = "Call Ended."; callStatus.style.color = "gray";
+                const canvas = document.getElementById('liveCallVisualizer');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0,0, canvas.width, canvas.height);
             }
         });
 
-        // Call Visualizer
         function startCallVisualizer(stream) {
             const canvas = document.getElementById('liveCallVisualizer');
             const ctx = canvas.getContext('2d');
@@ -333,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
             
             function draw() {
-                if(endCallBtn.style.display === 'none') return; // Stop if call ends
+                if(endCallBtn.style.display === 'none') return; 
                 requestAnimationFrame(draw);
                 analyser.getByteFrequencyData(dataArray);
                 ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
