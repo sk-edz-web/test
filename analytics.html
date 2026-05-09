@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - SonicMonitor Pro</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <header class="top-nav">
+                <div class="logo neon-text">SonicMonitor Pro</div>
+                <nav id="navMenu">
+                    <a href="dashboard.html">Dashboard</a>
+                    <a href="analytics.html" class="active">Analytics</a>
+                    <a href="settings.html">Settings</a>
+                </nav>
+            </header>
+
+            <div class="content-section">
+                <section class="panel">
+                    <h2 class="neon-text">Node Traffic Analytics</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Real-time stats of intercepted packets and audio frequencies.</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="panel" style="background: rgba(0,0,0,0.4);">
+                            <h3 class="sub-label">Data Transferred</h3>
+                            <p style="font-size: 2rem; color: var(--accent-primary); font-weight: bold;">1.4 GB</p>
+                        </div>
+                        <div class="panel" style="background: rgba(0,0,0,0.4);">
+                            <h3 class="sub-label">Active Nodes</h3>
+                            <p id="activeNodeCount" style="font-size: 2rem; color: #ff4757; font-weight: bold;">0</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Sidebar for consistency -->
+        <aside class="sidebar">
+            <div class="sidebar-header"><h2>System Status</h2></div>
+            <p class="sub-label" style="margin-top: 15px;">Monitoring Active IPs...</p>
+        </aside>
+    </div>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

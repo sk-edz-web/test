@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Settings - SonicMonitor</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <header class="top-nav">
+                <div class="logo neon-text">SonicMonitor</div>
+                <nav>
+                    <a href="dashboard.html">Dashboard</a>
+                    <a href="settings.html" class="active">Settings</a>
+                </nav>
+            </header>
+
+            <section class="panel" style="max-width: 500px; margin: 0 auto; margin-top: 50px;">
+                <h2 class="neon-text" style="margin-bottom: 20px;">System Settings</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">Manage your node identity and local storage.</p>
+                
+                <button id="deleteDataBtn" class="btn outline full-width" style="border-color: #ff4757; color: #ff4757; padding: 15px;">⚠️ Delete IP & Reset Node</button>
+            </section>
+        </main>
+    </div>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

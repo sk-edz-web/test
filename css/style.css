@@ -1,0 +1,60 @@
+:root {
+    --bg-main: #0a0c10; --bg-panel: #161b22; --border-color: #30363d;
+    --text-main: #e6edf3; --text-muted: #8b949e;
+    --accent-primary: #00ffcc; --accent-red: #ff4757;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Consolas', monospace; outline: none; }
+body { background: var(--bg-main); color: var(--text-main); height: 100vh; overflow: hidden; }
+
+/* Mobile Enforcer */
+.rotate-warning { display: none; position: fixed; inset: 0; background: #000; color: #fff; z-index: 9999; justify-content: center; align-items: center; text-align: center; }
+@media screen and (orientation: portrait) { .rotate-warning { display: flex; } .app-container, .center-layout { display: none !important; } }
+
+/* Layouts */
+.center-layout { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
+.app-container { display: flex; width: 100%; height: 100%; min-width: 900px; }
+.main-content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+.sidebar { width: 320px; background: var(--bg-panel); border-left: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; }
+
+/* UI Elements */
+.panel { background: rgba(22, 27, 34, 0.9); border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+.login-panel { width: 100%; max-width: 400px; padding: 30px; }
+.neon-text { color: var(--accent-primary); text-shadow: 0 0 10px rgba(0,255,204,0.3); }
+.sub-label { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 1px; }
+
+/* Buttons & Inputs */
+.btn { padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.2s; }
+.btn.primary { background: var(--accent-primary); color: #000; }
+.btn.outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
+.btn.outline:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+.full-width { width: 100%; }
+.icon-btn { width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer; }
+input[type="text"] { padding: 10px; background: #000; border: 1px solid var(--border-color); color: #fff; border-radius: 6px; }
+
+/* Headers */
+.top-nav { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+.top-nav nav a { color: var(--text-muted); text-decoration: none; margin: 0 15px; }
+.top-nav nav a.active { color: var(--text-main); border-bottom: 2px solid var(--accent-primary); padding-bottom: 5px; }
+.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+
+/* Canvas */
+.canvas-container { background: #000; border-radius: 8px; border: 1px inset #222; overflow: hidden;}
+canvas { width: 100%; height: 100%; }
+
+/* Hub List */
+.conn-item { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 10px; background: rgba(0,0,0,0.4); }
+.conn-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.conn-actions { display: flex; gap: 5px; }
+.conn-actions button { flex: 1; padding: 6px; font-size: 0.75rem; }
+
+/* Modals */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+.modal-box { text-align: center; border: 1px solid var(--accent-primary); box-shadow: 0 0 30px rgba(0,255,204,0.2); width: 350px;}
+
+/* Chat & Voice */
+.chat-messages { background: #000; border-radius: 6px; padding: 15px; overflow-y: auto; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;}
+.chat-msg { font-size: 0.85rem; padding: 8px 12px; border-radius: 8px; max-width: 80%; line-height: 1.4; word-wrap: break-word;}
+.msg-mine { background: rgba(0,255,204,0.1); border: 1px solid var(--accent-primary); align-self: flex-end; color: #fff;}
+.msg-theirs { background: rgba(255,255,255,0.05); border: 1px solid #444; align-self: flex-start; color: #ccc;}
+.audio-msg { margin-top: 5px; height: 35px; width: 200px; outline: none; }

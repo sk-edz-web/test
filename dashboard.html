@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard - SonicMonitor</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="rotate-warning"><h2>🔄 Rotate phone to Landscape Mode</h2></div>
+
+    <!-- Incoming Request Modal -->
+    <div id="requestModal" class="modal-overlay" style="display: none;">
+        <div class="panel modal-box">
+            <h2 class="neon-text">Incoming Request</h2>
+            <p>Node <b id="reqIp" style="color:var(--accent-primary)"></b> wants to connect.</p>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="declineBtn" class="btn outline full-width" style="border-color:#ff4757; color:#ff4757;">Decline</button>
+                <button id="acceptBtn" class="btn primary full-width">Accept & Join</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspect Modal (With Secret Easter Egg) -->
+    <div id="inspectModal" class="modal-overlay" style="display: none;">
+        <div class="panel modal-box" style="text-align: left;">
+            <h2 class="neon-text" style="text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px;">Node Inspection</h2>
+            <p style="margin-bottom: 8px;"><b>Target IP:</b> <span id="inspectIpText" class="secret-trigger" style="color: var(--accent-primary); cursor: pointer;"></span></p>
+            <p style="margin-bottom: 8px;"><b>Region:</b> <span style="color: #ccc;">Local Network (Encrypted)</span></p>
+            <p style="margin-bottom: 15px;"><b>Status:</b> <span style="color: #00ffcc;">Active & Listening</span></p>
+            <button id="closeInspectBtn" class="btn outline full-width">Close Diagnostics</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <main class="main-content">
+            <header class="top-nav">
+                <div class="logo neon-text">SonicMonitor</div>
+                <nav>
+                    <a href="dashboard.html" class="active">Dashboard</a>
+                    <a href="settings.html">Settings</a>
+                </nav>
+                <div class="right-status">My Node: <b id="myIpDisplay" class="neon-text"></b></div>
+            </header>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h3 class="neon-text">Global Audio Visualizer</h3>
+                </div>
+                <div class="canvas-container" style="height: 250px;"><canvas id="visualizer"></canvas></div>
+            </section>
+        </main>
+
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Connection Hub</h2>
+                <button id="toggleAddIp" class="icon-btn" style="background:var(--accent-primary); color:#000;">+</button>
+            </div>
+            
+            <div id="addIpBox" style="display:none; margin-top:15px; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px;">
+                <input type="text" id="targetIpInput" placeholder="Target IP (192...)" style="margin-bottom:10px; width:100%;">
+                <button id="saveIpBtn" class="btn primary full-width">Add Node</button>
+            </div>
+
+            <p class="sub-label" style="margin-top:20px; border-bottom:1px solid #333; padding-bottom:5px;">ACTIVE TARGETS</p>
+            <div id="hubList" class="connection-list">
+                <p style="color:gray; font-size:12px; text-align:center;">Scanning...</p>
+            </div>
+        </aside>
+    </div>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
