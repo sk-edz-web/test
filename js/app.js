@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        // Dashboard Background Visualizer (Dummy aesthetic)
+        // Dashboard Background Visualizer
         const canvas = document.getElementById('visualizer');
         if(canvas) {
             const ctx = canvas.getContext('2d');
@@ -197,7 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             chatBox.appendChild(div);
-            // Smooth Scroll to bottom
             chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
         });
 
@@ -208,16 +207,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // Allow pressing Enter to send message
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendChatBtn.click();
         });
 
-        // --- B. HOLD TO TALK (VOICE MESSAGE) ---
+        // --- B. HOLD TO TALK (FIXED STORAGE ERROR HANDLING) ---
         const pttBtn = document.getElementById('pttBtn');
         let mediaRecorder, audioChunks = [], isRecording = false;
 
-        pttBtn.addEventListener('mousedown', async () => {
+        const startRecording = async (e) => {
+            if(e) e.preventDefault();
+            if(isRecording) return;
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
@@ -226,44 +226,73 @@ document.addEventListener('DOMContentLoaded', () => {
                     pttBtn.innerText = '⏳ Sending...'; pttBtn.style.color = 'gray';
                     const blob = new Blob(audioChunks, { type: 'audio/wav' }); audioChunks = [];
                     const sRef = storageRef(storage, `voice_msgs/${roomId}/${Date.now()}.wav`);
-                    await uploadBytes(sRef, blob);
-                    const url = await getDownloadURL(sRef);
-                    push(ref(db, `chats/${roomId}`), { type: 'audio', sender: myIp, url: url });
-                    pttBtn.innerText = '🎤 Hold to Talk'; pttBtn.style.color = '#f39c12';
+                    
+                    try {
+                        // Attempt to upload. If Storage rules fail, this will catch the error.
+                        await uploadBytes(sRef, blob);
+                        const url = await getDownloadURL(sRef);
+                        push(ref(db, `chats/${roomId}`), { type: 'audio', sender: myIp, url: url });
+                        pttBtn.innerText = '🎤 Hold to Talk'; pttBtn.style.color = '#f39c12';
+                    } catch (error) {
+                        console.error("Firebase Storage Error: ", error);
+                        alert("Storage Upload Failed! Please check Firebase Storage Rules (allow read, write: if true;)");
+                        pttBtn.innerText = '🎤 Send Failed'; pttBtn.style.color = '#ff4757';
+                        setTimeout(() => { pttBtn.innerText = '🎤 Hold to Talk'; pttBtn.style.color = '#f39c12'; }, 3000);
+                    }
+                    
                     stream.getTracks().forEach(t => t.stop());
                 };
                 mediaRecorder.start(); isRecording = true;
                 pttBtn.innerText = '🔴 Recording...'; pttBtn.style.background = 'rgba(243, 156, 18, 0.2)';
             } catch(err) { alert('Mic access required for Voice Notes.'); }
-        });
+        };
 
-        // Handle Touch Events for Mobile (Hold to Talk)
-        pttBtn.addEventListener('touchstart', (e) => { e.preventDefault(); pttBtn.dispatchEvent(new Event('mousedown')); });
-        pttBtn.addEventListener('touchend', (e) => { e.preventDefault(); pttBtn.dispatchEvent(new Event('mouseup')); });
+        const stopRecording = (e) => {
+            if(e) e.preventDefault();
+            if(isRecording && mediaRecorder.state !== 'inactive') { 
+                mediaRecorder.stop(); isRecording = false; pttBtn.style.background = 'transparent'; 
+            }
+        };
 
-        pttBtn.addEventListener('mouseup', () => {
-            if(isRecording) { mediaRecorder.stop(); isRecording = false; pttBtn.style.background = 'transparent'; }
-        });
+        pttBtn.addEventListener('mousedown', startRecording);
+        pttBtn.addEventListener('touchstart', startRecording, {passive: false});
+        window.addEventListener('mouseup', stopRecording);
+        pttBtn.addEventListener('touchend', stopRecording, {passive: false});
+        pttBtn.addEventListener('mouseleave', stopRecording);
 
-        // --- C. WEBRTC LIVE CALL SIGNALING ---
+        // --- C. WEBRTC LIVE CALL SIGNALING (FIXED AUDIO PLAYBACK) ---
         const startCallBtn = document.getElementById('startCallBtn');
         const endCallBtn = document.getElementById('endCallBtn');
         const callStatus = document.getElementById('callStatus');
         const localAudio = document.getElementById('localAudio');
         const remoteAudio = document.getElementById('remoteAudio');
         
+        // Ensure remote audio can play on mobile
+        remoteAudio.autoplay = true;
+        remoteAudio.playsInline = true; 
+
         let peerConnection;
         let localStream;
-        const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        let pendingCandidates = [];
+        const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
         const callRef = ref(db, `calls/${roomId}`);
 
         async function initWebRTC() {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            // Added Echo Cancellation for better call quality
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
             localAudio.srcObject = localStream;
+            localAudio.muted = true; // Mute self to prevent loopback
+
             peerConnection = new RTCPeerConnection(servers);
-            
             localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            peerConnection.ontrack = (event) => { remoteAudio.srcObject = event.streams[0]; };
+            
+            peerConnection.ontrack = (event) => { 
+                if (remoteAudio.srcObject !== event.streams[0]) {
+                    remoteAudio.srcObject = event.streams[0];
+                    // Explicit play command required for some mobile browsers
+                    remoteAudio.play().catch(e => console.error("Audio playback blocked by browser:", e));
+                }
+            };
             
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) { push(ref(db, `calls/${roomId}/candidates/${safeMyIp}`), event.candidate.toJSON()); }
@@ -293,6 +322,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 await peerConnection.setLocalDescription(answer);
                 await set(ref(db, `calls/${roomId}/answer`), { type: answer.type, sdp: answer.sdp, from: safeMyIp });
                 callStatus.innerText = "Call Connected 🟢";
+                
+                pendingCandidates.forEach(c => peerConnection.addIceCandidate(new RTCIceCandidate(c)));
+                pendingCandidates = [];
             }
         });
 
@@ -302,14 +334,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(!peerConnection.currentRemoteDescription) {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
                     callStatus.innerText = "Call Connected 🟢"; callStatus.style.color = "#00ffcc";
+                    
+                    pendingCandidates.forEach(c => peerConnection.addIceCandidate(new RTCIceCandidate(c)));
+                    pendingCandidates = [];
                 }
             }
         });
 
         onChildAdded(ref(db, `calls/${roomId}/candidates`), (snap) => {
-            if(snap.key !== safeMyIp && peerConnection) {
-                snap.forEach(candidateSnap => {
-                    peerConnection.addIceCandidate(new RTCIceCandidate(candidateSnap.val()));
+            if(snap.key !== safeMyIp) {
+                snap.forEach(child => {
+                    const candidate = new RTCIceCandidate(child.val());
+                    if(peerConnection && peerConnection.remoteDescription) {
+                        peerConnection.addIceCandidate(candidate).catch(e => console.log(e));
+                    } else {
+                        pendingCandidates.push(candidate);
+                    }
                 });
             }
         });
@@ -320,9 +360,8 @@ document.addEventListener('DOMContentLoaded', () => {
             remove(callRef); 
             startCallBtn.style.display = 'block'; endCallBtn.style.display = 'none';
             callStatus.innerText = "Standby..."; callStatus.style.color = "gray";
-            const canvas = document.getElementById('liveCallVisualizer');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0,0, canvas.width, canvas.height);
+            const ctx = document.getElementById('liveCallVisualizer').getContext('2d');
+            ctx.clearRect(0,0, 300, 300);
         };
 
         onValue(callRef, (snap) => {
@@ -331,9 +370,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(localStream) localStream.getTracks().forEach(t => t.stop());
                 startCallBtn.style.display = 'block'; endCallBtn.style.display = 'none';
                 callStatus.innerText = "Call Ended."; callStatus.style.color = "gray";
-                const canvas = document.getElementById('liveCallVisualizer');
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0,0, canvas.width, canvas.height);
+                const ctx = document.getElementById('liveCallVisualizer').getContext('2d');
+                ctx.clearRect(0,0, 300, 300);
             }
         });
 
